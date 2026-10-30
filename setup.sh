@@ -362,7 +362,7 @@ check_podman() {
 
     GRAPHROOT="$(podman info --format '{{.Store.GraphRoot}}' 2>/dev/null || true)"
     if [ -n "$GRAPHROOT" ]; then
-        info "Podman-Speicher: $GRAPHROOT"
+        info "Podman-Speicher (GraphRoot laut podman info): $GRAPHROOT"
     fi
 
     local rc=0
@@ -569,9 +569,12 @@ check_models() {
         local free margin=$((1024 * 1024 * 1024))
         free="$(free_bytes "$MODELS_DIR")"
         if [ $((need_bytes + margin)) -gt "$free" ]; then
-            check_err "zu wenig Platz in $MODELS_DIR: $(fmt_gb "$((need_bytes + margin))") GB benötigt, $(fmt_gb "$free") GB frei"
+            check_err "zu wenig Platz in $MODELS_DIR: $(fmt_gb "$((need_bytes + margin))") GB benötigt, $(fmt_gb "$free") GB frei" \
+                      "$(mount_desc "$MODELS_DIR")"
         else
             ok "Platz für Downloads: $(fmt_gb "$need_bytes") GB benötigt, $(fmt_gb "$free") GB frei"
+            hint "Pfad: $MODELS_DIR"
+            hint "$(mount_desc "$MODELS_DIR")"
         fi
     fi
 }
@@ -681,9 +684,13 @@ check_images() {
         local free min=$((MIN_IMAGE_SPACE_GB * gib))
         free="$(free_bytes "$GRAPHROOT")"
         if [ "$free" -lt "$min" ]; then
-            check_err "zu wenig Platz im Podman-Speicher $GRAPHROOT: $(fmt_gb "$free") GB frei, erforderlich $MIN_IMAGE_SPACE_GB GB"
+            check_err "zu wenig Platz im Podman-Speicher: $(fmt_gb "$free") GB frei, erforderlich $MIN_IMAGE_SPACE_GB GB" \
+                      "Pfad: $GRAPHROOT (GraphRoot laut podman info)" \
+                      "$(mount_desc "$GRAPHROOT")"
         else
             ok "Podman-Speicher: $(fmt_gb "$free") GB frei"
+            hint "Pfad: $GRAPHROOT (GraphRoot laut podman info)"
+            hint "$(mount_desc "$GRAPHROOT")"
         fi
     fi
 }

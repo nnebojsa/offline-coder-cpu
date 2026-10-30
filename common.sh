@@ -160,6 +160,22 @@ free_bytes() {
     df -Pk "$d" | awk 'NR == 2 { printf "%.0f", $4 * 1024 }'
 }
 
+# Einhängepunkt und Gerät, auf dem ein Pfad liegt,
+# z.B. "Dateisystem / auf /dev/mapper/cryptroot"
+mount_desc() {
+    local dir target="" src=""
+    dir="$(existing_parent "$1")"
+    if command -v findmnt >/dev/null 2>&1; then
+        target="$(findmnt -n -o TARGET --target "$dir" 2>/dev/null | head -n 1 || true)"
+        src="$(findmnt -n -o SOURCE --target "$dir" 2>/dev/null | head -n 1 || true)"
+    fi
+    if [ -n "$target" ]; then
+        echo "Dateisystem $target auf ${src:-unbekannt}"
+    else
+        df -P "$dir" 2>/dev/null | awk 'NR == 2 { print "Dateisystem " $6 " auf " $1 }'
+    fi
+}
+
 # Nächster existierender Pfad (für Schreibrechte-Prüfungen)
 existing_parent() {
     local d="$1"
