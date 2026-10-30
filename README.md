@@ -7,9 +7,7 @@ projects (folders), custom system prompts, attached knowledge and memory,
 similar to cloud chat services.
 
 This version is designed for a notebook with 4 CPU cores and no dedicated
-GPU (HP EliteBook 850 G8, i5-1135G7), initially with 16 GB of RAM and with
-64 GB after the upgrade. The project is located in `/DATA/offline-coder-cpu` on a
-LUKS-encrypted partition.
+GPU (e.g. HP EliteBook 850 G8, i5-1135G7 with 16 GB of RAM).
 
 A German version of this description is available in [README_de.md](README_de.md).
 
@@ -62,7 +60,7 @@ own. It is reachable only by Open WebUI.
 - **CPU:** x86_64 with AVX2 (recommended) or aarch64, at least 4 cores. On
   the CPU, memory bandwidth limits the speed, two RAM modules (dual channel)
   are considerably faster than one.
-- **Disk space** on `/DATA`:
+- **Disk space** in the project directory:
 
 | Size           | Used for                                        |
 |----------------|-------------------------------------------------|
@@ -78,10 +76,10 @@ own. It is reachable only by Open WebUI.
 ### Encryption
 
 Chats, uploads and knowledge are stored in the project directory
-(`data/webui/`). The project therefore belongs on a LUKS-encrypted device.
-Here this is the partition `/DATA`, which is unlocked at boot by a key file
-stored on the encrypted root partition (entries in `/etc/crypttab` and
-`/etc/fstab`). Any other encrypted directory is suitable as well.
+(`data/webui/`). The project therefore belongs on a LUKS-encrypted device,
+e.g. a separate partition such as `/DATA` that is unlocked at boot by a key
+file stored on the encrypted root partition (entries in `/etc/crypttab` and
+`/etc/fstab`), or the home directory on an encrypted root partition.
 
 With `REQUIRE_ENCRYPTION=1` (default), `setup.sh` aborts if the data is
 located on an unencrypted device.
@@ -141,18 +139,26 @@ None of these files belong in the repository, `.gitignore` excludes them.
 
 ## 5. Setup
 
-Prerequisite: `/DATA` is LUKS-encrypted and mounted.
+Prerequisite: the target directory is located on a LUKS-encrypted, mounted
+device. The path can be chosen freely, the example uses
+`/DATA/offline-coder-cpu`.
 
 ```
-sudo install -d -o "$USER" -g "$USER" /DATA/offline-coder-cpu
-git clone https://github.com/<user>/offline-coder-cpu.git /DATA/offline-coder-cpu
-cd /DATA/offline-coder-cpu
+TARGET=/DATA/offline-coder-cpu    # insert your own path
+git clone https://github.com/<user>/offline-coder-cpu.git "$TARGET"
+cd "$TARGET"
 vim setup.conf          # optional, the defaults fit 16 GB of RAM
 ./setup.sh --check      # checks only
 ./setup.sh              # set up and start
 ```
 
-`<user>` is the GitHub account that hosts the repository.
+`<user>` is the GitHub account that hosts the repository. If the parent
+directory is owned by root (e.g. `/DATA`), the target directory is created
+beforehand and handed over to the user:
+
+```
+sudo install -d -o "$USER" -g "$USER" "$TARGET"
+```
 
 Afterwards the interface is available at <http://127.0.0.1:3000>. The first
 account created there becomes the administrator. The account is local and is
@@ -246,8 +252,8 @@ one block is active.
 
 | Model            | Vendor  | Total / active | File          | RAM   | Use                              |
 |------------------|---------|----------------|---------------|-------|----------------------------------|
-| Qwen3.5-9B       | Alibaba | 9B (dense)     | approx. 6 GB  | 16 GB | default before the RAM upgrade   |
-| Qwen3.6-35B-A3B  | Alibaba | 35B / 3B       | approx. 21 GB | 64 GB | default after the RAM upgrade    |
+| Qwen3.5-9B       | Alibaba | 9B (dense)     | approx. 6 GB  | 16 GB | default with 16 GB of RAM        |
+| Qwen3.6-35B-A3B  | Alibaba | 35B / 3B       | approx. 21 GB | 64 GB | default with 64 GB of RAM        |
 | Gemma 4 26B-A4B  | Google  | 25B / 3.8B     | approx. 16 GB | 64 GB | alternative for comparison       |
 | Qwen3-Coder-Next | Alibaba | 80B / 3B       | approx. 34 GB | 64 GB | coding specialist, 3-bit, tight  |
 
@@ -257,10 +263,10 @@ as Qwen3.8-27B are not included. Qwen3-Coder-Next needs about 34 GB for the
 model file alone and is only useful when few other programs are running. It
 has no thinking mode.
 
-Changing the model, e.g. after the RAM upgrade:
+Changing the model, e.g. after a RAM upgrade to 64 GB:
 
-1. In `setup.conf`, comment out the block "16 GB RAM" and activate the
-   block "64 GB RAM: Standard nach dem RAM-Ausbau".
+1. In `setup.conf`, comment out the block "16 GB RAM: Standard" and activate
+   the block "64 GB RAM: Standard".
 2. `./setup.sh --check`, then `./setup.sh`.
 
 The model is downloaded and the containers are recreated. The model name in
@@ -290,10 +296,10 @@ container. Requires approx. 2 GB of additional RAM.
   connections. A strict separation requires firewall rules.
 - Chats and uploaded files are stored in `WEBUI_DATA_DIR`. Sensitive content
   (e.g. logs containing personal data) should be deleted after analysis.
-- `WEBUI_DATA_DIR` and the session key `.webui_secret` are located on the
-  encrypted partition `/DATA`. With the machine switched off, they cannot be
-  read without the passphrase of the root partition. While the machine is
-  running, they are accessible like any other file.
+- `WEBUI_DATA_DIR` and the session key `.webui_secret` are located in the
+  project directory on the encrypted device. With the machine switched off,
+  they cannot be read without the passphrase. While the machine is running,
+  they are accessible like any other file.
 - Whether confidential data may be processed on the machine is governed by
   internal policies, even if the model runs locally.
 
@@ -367,10 +373,11 @@ Increase `WEBUI_REQUEST_TIMEOUT` in `setup.conf`, then run `./setup.sh`.
 
 **"liegt auf einem unverschlüsselten Datenträger" (unencrypted device)**
 
-The device holding the project directory is not LUKS-encrypted. Check:
+The device holding the project directory is not LUKS-encrypted. Check in the
+project directory:
 
 ```
-findmnt --target /DATA/offline-coder-cpu
+findmnt --target .
 lsblk -f
 ```
 

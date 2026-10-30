@@ -7,9 +7,7 @@ System-Prompts, angehängtem Wissen und Gedächtnis, ähnlich wie bei
 Cloud-Chatdiensten.
 
 Diese Fassung ist ausgelegt für ein Notebook mit 4 CPU-Kernen ohne
-dedizierte GPU (HP EliteBook 850 G8, i5-1135G7), zunächst mit 16 GB RAM und
-nach dem Ausbau mit 64 GB. Das Projekt liegt unter `/DATA/offline-coder-cpu` auf
-einer mit LUKS verschlüsselten Partition.
+dedizierte GPU (z.B. HP EliteBook 850 G8, i5-1135G7 mit 16 GB RAM).
 
 Die englische Fassung dieser Beschreibung steht in [README.md](README.md).
 
@@ -63,7 +61,7 @@ Weboberfläche. Er ist nur für Open WebUI erreichbar.
 - **CPU:** x86_64 mit AVX2 (empfohlen) oder aarch64, mindestens 4 Kerne.
   Auf der CPU begrenzt die Speicherbandbreite die Geschwindigkeit, zwei
   RAM-Module (Dual-Channel) sind deutlich schneller als eines.
-- **Speicherplatz** auf `/DATA`:
+- **Speicherplatz** im Projektverzeichnis:
 
 | Größe       | Verwendung                                            |
 |-------------|-------------------------------------------------------|
@@ -79,11 +77,11 @@ Weboberfläche. Er ist nur für Open WebUI erreichbar.
 ### Verschlüsselung
 
 Chats, Uploads und Wissen liegen im Projektverzeichnis (`data/webui/`).
-Das Projekt gehört deshalb auf einen mit LUKS verschlüsselten Datenträger.
-Hier ist das die Partition `/DATA`, die beim Booten über eine
+Das Projekt gehört deshalb auf einen mit LUKS verschlüsselten Datenträger,
+z.B. eine eigene Partition wie `/DATA`, die beim Booten über eine
 Schlüsseldatei auf der ebenfalls verschlüsselten Root-Partition entsperrt
-wird (Einträge in `/etc/crypttab` und `/etc/fstab`). Jedes andere
-verschlüsselte Verzeichnis eignet sich ebenso.
+wird (Einträge in `/etc/crypttab` und `/etc/fstab`), oder das
+Home-Verzeichnis auf einer verschlüsselten Root-Partition.
 
 Mit `REQUIRE_ENCRYPTION=1` (Standard) bricht `setup.sh` ab, wenn die Daten
 auf einem unverschlüsselten Datenträger liegen.
@@ -143,18 +141,26 @@ Keine dieser Dateien gehört ins Repository, `.gitignore` schließt sie aus.
 
 ## 5. Einrichtung
 
-Voraussetzung: `/DATA` ist mit LUKS verschlüsselt und eingehängt.
+Voraussetzung: Das Zielverzeichnis liegt auf einem mit LUKS verschlüsselten,
+eingehängten Datenträger. Der Pfad ist frei wählbar, im Beispiel
+`/DATA/offline-coder-cpu`.
 
 ```
-sudo install -d -o "$USER" -g "$USER" /DATA/offline-coder-cpu
-git clone https://github.com/<benutzer>/offline-coder-cpu.git /DATA/offline-coder-cpu
-cd /DATA/offline-coder-cpu
+ZIEL=/DATA/offline-coder-cpu      # eigenen Pfad einsetzen
+git clone https://github.com/<benutzer>/offline-coder-cpu.git "$ZIEL"
+cd "$ZIEL"
 vim setup.conf          # optional, Standardwerte passen für 16 GB RAM
 ./setup.sh --check      # nur prüfen
 ./setup.sh              # einrichten und starten
 ```
 
-`<benutzer>` ist der GitHub-Account, unter dem das Repository liegt.
+`<benutzer>` ist der GitHub-Account, unter dem das Repository liegt. Gehört
+das übergeordnete Verzeichnis root (z.B. `/DATA`), wird das Zielverzeichnis
+vorher angelegt und dem eigenen Benutzer übergeben:
+
+```
+sudo install -d -o "$USER" -g "$USER" "$ZIEL"
+```
 
 Danach ist die Oberfläche unter <http://127.0.0.1:3000> erreichbar. Das erste
 dort angelegte Konto wird Administrator. Das Konto ist lokal und wird in
@@ -246,8 +252,8 @@ ein Block ist aktiv.
 
 | Modell           | Hersteller | Gesamt / aktiv | Datei     | RAM   | Einsatz                         |
 |------------------|------------|----------------|-----------|-------|---------------------------------|
-| Qwen3.5-9B       | Alibaba    | 9B (dicht)     | ca. 6 GB  | 16 GB | Standard vor dem RAM-Ausbau     |
-| Qwen3.6-35B-A3B  | Alibaba    | 35B / 3B       | ca. 21 GB | 64 GB | Standard nach dem RAM-Ausbau    |
+| Qwen3.5-9B       | Alibaba    | 9B (dicht)     | ca. 6 GB  | 16 GB | Standard bei 16 GB RAM          |
+| Qwen3.6-35B-A3B  | Alibaba    | 35B / 3B       | ca. 21 GB | 64 GB | Standard bei 64 GB RAM          |
 | Gemma 4 26B-A4B  | Google     | 25B / 3,8B     | ca. 16 GB | 64 GB | Alternative zum Vergleich       |
 | Qwen3-Coder-Next | Alibaba    | 80B / 3B       | ca. 34 GB | 64 GB | Coding-Spezialist, 3-Bit, knapp |
 
@@ -257,10 +263,10 @@ Modelle wie Qwen3.8-27B. Qwen3-Coder-Next belegt allein für die
 Modelldatei rund 34 GB und ist nur sinnvoll, wenn daneben wenige Programme
 laufen. Es hat keinen Denk-Modus.
 
-Wechsel, z.B. nach dem RAM-Ausbau:
+Wechsel, z.B. nach einem RAM-Ausbau auf 64 GB:
 
-1. In `setup.conf` den Block "16 GB RAM" auskommentieren und den Block
-   "64 GB RAM: Standard nach dem RAM-Ausbau" aktivieren.
+1. In `setup.conf` den Block "16 GB RAM: Standard" auskommentieren und den
+   Block "64 GB RAM: Standard" aktivieren.
 2. `./setup.sh --check`, danach `./setup.sh`.
 
 Das Modell wird geladen, die Container werden neu angelegt. Der Modellname
@@ -291,10 +297,10 @@ im Container läuft. Benötigt zusätzlich ca. 2 GB RAM.
   Verbindungen. Für eine harte Trennung sind Firewall-Regeln nötig.
 - Chats und hochgeladene Dateien liegen in `WEBUI_DATA_DIR`. Sensible Inhalte
   (z.B. Logs mit personenbezogenen Daten) nach der Analyse löschen.
-- `WEBUI_DATA_DIR` und der Sitzungsschlüssel `.webui_secret` liegen auf der
-  verschlüsselten Partition `/DATA`. Bei ausgeschaltetem Rechner sind sie
-  ohne die Passphrase der Root-Partition nicht lesbar, im laufenden Betrieb
-  sind sie wie alle anderen Dateien zugänglich.
+- `WEBUI_DATA_DIR` und der Sitzungsschlüssel `.webui_secret` liegen im
+  Projektverzeichnis auf dem verschlüsselten Datenträger. Bei
+  ausgeschaltetem Rechner sind sie ohne Passphrase nicht lesbar, im
+  laufenden Betrieb sind sie wie alle anderen Dateien zugänglich.
 - Ob vertrauliche Daten auf dem Rechner verarbeitet werden dürfen, regeln die
   internen Vorgaben, auch wenn das Modell lokal läuft.
 
@@ -369,10 +375,10 @@ Dateien anhängen oder `CHAT_CTX` erhöhen (benötigt mehr RAM).
 **"liegt auf einem unverschlüsselten Datenträger"**
 
 Der Datenträger mit dem Projektverzeichnis ist nicht mit LUKS
-verschlüsselt. Prüfung:
+verschlüsselt. Prüfung im Projektverzeichnis:
 
 ```
-findmnt --target /DATA/offline-coder-cpu
+findmnt --target .
 lsblk -f
 ```
 
