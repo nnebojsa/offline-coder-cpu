@@ -144,25 +144,16 @@ Keine dieser Dateien gehört ins Repository, `.gitignore` schließt sie aus.
 
 ## 5. Einrichtung
 
-Der Pfad ist frei wählbar, im Beispiel `/DATA/offline-coder-cpu`. Empfohlen
-ist ein verschlüsselter Datenträger (siehe Abschnitt 3, Verschlüsselung).
-
 ```
-ZIEL=/DATA/offline-coder-cpu      # eigenen Pfad einsetzen
-git clone https://github.com/<benutzer>/offline-coder-cpu.git "$ZIEL"
-cd "$ZIEL"
+git clone https://github.com/nnebojsa/offline-coder-cpu.git
+cd offline-coder-cpu
 vim setup.conf          # optional, Standardwerte passen für 16 GB RAM
 ./setup.sh --check      # nur prüfen
 ./setup.sh              # einrichten und starten
 ```
 
-`<benutzer>` ist der GitHub-Account, unter dem das Repository liegt. Gehört
-das übergeordnete Verzeichnis root (z.B. `/DATA`), wird das Zielverzeichnis
-vorher angelegt und dem eigenen Benutzer übergeben:
-
-```
-sudo install -d -o "$USER" -g "$USER" "$ZIEL"
-```
+Das Verzeichnis ist frei wählbar, empfohlen ist ein verschlüsselter
+Datenträger (siehe Abschnitt 3).
 
 Danach ist die Oberfläche unter <http://127.0.0.1:3000> erreichbar. Das erste
 dort angelegte Konto wird Administrator. Das Konto ist lokal und wird in

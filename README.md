@@ -141,25 +141,16 @@ None of these files belong in the repository, `.gitignore` excludes them.
 
 ## 5. Setup
 
-The path can be chosen freely, the example uses `/DATA/offline-coder-cpu`.
-An encrypted device is recommended (see section 3, Encryption).
-
 ```
-TARGET=/DATA/offline-coder-cpu    # insert your own path
-git clone https://github.com/<user>/offline-coder-cpu.git "$TARGET"
-cd "$TARGET"
+git clone https://github.com/nnebojsa/offline-coder-cpu.git
+cd offline-coder-cpu
 vim setup.conf          # optional, the defaults fit 16 GB of RAM
 ./setup.sh --check      # checks only
 ./setup.sh              # set up and start
 ```
 
-`<user>` is the GitHub account that hosts the repository. If the parent
-directory is owned by root (e.g. `/DATA`), the target directory is created
-beforehand and handed over to the user:
-
-```
-sudo install -d -o "$USER" -g "$USER" "$TARGET"
-```
+The directory can be chosen freely, an encrypted device is recommended (see
+section 3).
 
 Afterwards the interface is available at <http://127.0.0.1:3000>. The first
 account created there becomes the administrator. The account is local and is
