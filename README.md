@@ -46,9 +46,9 @@ own. It is reachable only by Open WebUI.
   Afterwards llama-server (`--offline`) and Open WebUI (`OFFLINE_MODE`) work
   without internet access. Telemetry and update checks are disabled.
 - By default, all ports are bound to `127.0.0.1` only.
-- **Encrypted storage:** `setup.sh` checks whether the Open WebUI data and
-  the project directory are located on a LUKS/dm-crypt encrypted device
-  (`REQUIRE_ENCRYPTION`).
+- **Encryption notice:** `setup.sh` checks whether the Open WebUI data is
+  located on a LUKS/dm-crypt encrypted device and prints a notice
+  otherwise. The setup continues in both cases (`REQUIRE_ENCRYPTION`).
 
 ## 3. Requirements
 
@@ -76,13 +76,15 @@ own. It is reachable only by Open WebUI.
 ### Encryption
 
 Chats, uploads and knowledge are stored in the project directory
-(`data/webui/`). The project therefore belongs on a LUKS-encrypted device,
-e.g. a separate partition such as `/DATA` that is unlocked at boot by a key
-file stored on the encrypted root partition (entries in `/etc/crypttab` and
-`/etc/fstab`), or the home directory on an encrypted root partition.
+(`data/webui/`). A LUKS-encrypted device is therefore recommended, but not
+required, e.g. a separate partition such as `/DATA` that is unlocked at
+boot by a key file stored on the encrypted root partition (entries in
+`/etc/crypttab` and `/etc/fstab`), or the home directory on an encrypted
+root partition.
 
-With `REQUIRE_ENCRYPTION=1` (default), `setup.sh` aborts if the data is
-located on an unencrypted device.
+If the data is unencrypted, `setup.sh` only prints a notice. With
+`REQUIRE_ENCRYPTION=1` in `setup.conf`, `setup.sh` aborts instead, e.g. if
+your own policies require encrypted storage.
 
 ### Software
 
@@ -139,9 +141,8 @@ None of these files belong in the repository, `.gitignore` excludes them.
 
 ## 5. Setup
 
-Prerequisite: the target directory is located on a LUKS-encrypted, mounted
-device. The path can be chosen freely, the example uses
-`/DATA/offline-coder-cpu`.
+The path can be chosen freely, the example uses `/DATA/offline-coder-cpu`.
+An encrypted device is recommended (see section 3, Encryption).
 
 ```
 TARGET=/DATA/offline-coder-cpu    # insert your own path
@@ -205,7 +206,7 @@ The most important values:
 | `AUTOCOMPLETE`           | 1 = container for VS Code code completion          |
 | `MIN_RAM_GB`             | minimum RAM for the check (default: 16)            |
 | `RESERVED_RAM_GB`        | RAM for system, desktop, browser, VS Code (6)      |
-| `REQUIRE_ENCRYPTION`     | 1 = abort if the storage is not encrypted          |
+| `REQUIRE_ENCRYPTION`     | 0 = notice (default), 1 = abort if unencrypted     |
 
 > **Note on Open WebUI:** values such as title generation, background tasks
 > or the default model are applied by Open WebUI only on the first start.
@@ -297,9 +298,9 @@ container. Requires approx. 2 GB of additional RAM.
 - Chats and uploaded files are stored in `WEBUI_DATA_DIR`. Sensitive content
   (e.g. logs containing personal data) should be deleted after analysis.
 - `WEBUI_DATA_DIR` and the session key `.webui_secret` are located in the
-  project directory on the encrypted device. With the machine switched off,
-  they cannot be read without the passphrase. While the machine is running,
-  they are accessible like any other file.
+  project directory. If it is on an encrypted device, they cannot be read
+  without the passphrase while the machine is switched off. While the
+  machine is running, they are accessible like any other file.
 - Whether confidential data may be processed on the machine is governed by
   internal policies, even if the model runs locally.
 
@@ -373,8 +374,9 @@ Increase `WEBUI_REQUEST_TIMEOUT` in `setup.conf`, then run `./setup.sh`.
 
 **"liegt auf einem unverschlüsselten Datenträger" (unencrypted device)**
 
-The device holding the project directory is not LUKS-encrypted. Check in the
-project directory:
+The device holding the project directory is not LUKS-encrypted. By default
+this is only a notice, an error only with `REQUIRE_ENCRYPTION=1`. Check in
+the project directory:
 
 ```
 findmnt --target .

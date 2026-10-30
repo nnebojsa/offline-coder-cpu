@@ -457,13 +457,22 @@ check_dirs() {
     fi
 }
 
-# Chats, Uploads und Wissen (WEBUI_DATA_DIR) sowie der Sitzungsschlüssel im
-# Projektverzeichnis sollen auf einem verschlüsselten Datenträger liegen.
+# Empfehlung: Chats, Uploads und Wissen (WEBUI_DATA_DIR) sowie der
+# Sitzungsschlüssel im Projektverzeichnis liegen auf einem verschlüsselten
+# Datenträger. Standard ist nur ein Hinweis, Abbruch mit REQUIRE_ENCRYPTION=1.
 # Die Modelle sind öffentlich und werden nicht geprüft.
 check_encryption() {
     section "Verschlüsselung"
-    local entry label dir rc
-    for entry in "Daten Open WebUI|$WEBUI_DATA_DIR" "Projektverzeichnis|$SCRIPT_DIR"; do
+    local entry label dir rc data_mnt proj_mnt entries
+    entries=("Daten Open WebUI|$WEBUI_DATA_DIR")
+    # Projektverzeichnis nur zusätzlich prüfen, wenn es auf einem anderen
+    # Dateisystem liegt (sonst doppelte Meldung)
+    data_mnt="$(findmnt -n -o TARGET --target "$(existing_parent "$WEBUI_DATA_DIR")" 2>/dev/null || true)"
+    proj_mnt="$(findmnt -n -o TARGET --target "$SCRIPT_DIR" 2>/dev/null || true)"
+    if [ -z "$data_mnt" ] || [ "$data_mnt" != "$proj_mnt" ]; then
+        entries+=("Projektverzeichnis|$SCRIPT_DIR")
+    fi
+    for entry in "${entries[@]}"; do
         label="${entry%%|*}"
         dir="${entry#*|}"
         rc=0
@@ -477,9 +486,11 @@ check_encryption() {
                     check_err "$label liegt auf einem unverschlüsselten Datenträger: $dir" \
                               "Chats, Uploads und Wissen wären bei ausgeschaltetem Rechner lesbar" \
                               "Abhilfe: Projekt auf einen mit LUKS verschlüsselten Datenträger legen" \
-                              "oder REQUIRE_ENCRYPTION=0 in setup.conf (nur Warnung)"
+                              "oder REQUIRE_ENCRYPTION=0 in setup.conf (nur Hinweis)"
                 else
-                    check_warn "$label liegt auf einem unverschlüsselten Datenträger: $dir"
+                    check_warn "$label liegt auf einem unverschlüsselten Datenträger: $dir" \
+                               "Hinweis: Chats, Uploads und Wissen sind bei ausgeschaltetem Rechner lesbar." \
+                               "Empfohlen ist ein verschlüsselter Datenträger, die Einrichtung läuft weiter."
                 fi
                 ;;
             *)

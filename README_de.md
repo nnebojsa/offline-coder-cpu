@@ -47,9 +47,10 @@ Weboberfläche. Er ist nur für Open WebUI erreichbar.
   arbeiten llama-server (`--offline`) und Open WebUI (`OFFLINE_MODE`) ohne
   Internetzugriff. Telemetrie und Update-Prüfungen sind abgeschaltet.
 - Die Ports sind standardmäßig nur an `127.0.0.1` gebunden.
-- **Verschlüsselte Ablage:** `setup.sh` prüft, ob die Daten von Open WebUI
-  und das Projektverzeichnis auf einem mit LUKS/dm-crypt verschlüsselten
-  Datenträger liegen (`REQUIRE_ENCRYPTION`).
+- **Hinweis zur Verschlüsselung:** `setup.sh` prüft, ob die Daten von
+  Open WebUI auf einem mit LUKS/dm-crypt verschlüsselten Datenträger liegen,
+  und gibt andernfalls einen Hinweis aus. Die Einrichtung läuft in beiden
+  Fällen weiter (`REQUIRE_ENCRYPTION`).
 
 ## 3. Voraussetzungen
 
@@ -77,14 +78,16 @@ Weboberfläche. Er ist nur für Open WebUI erreichbar.
 ### Verschlüsselung
 
 Chats, Uploads und Wissen liegen im Projektverzeichnis (`data/webui/`).
-Das Projekt gehört deshalb auf einen mit LUKS verschlüsselten Datenträger,
-z.B. eine eigene Partition wie `/DATA`, die beim Booten über eine
-Schlüsseldatei auf der ebenfalls verschlüsselten Root-Partition entsperrt
-wird (Einträge in `/etc/crypttab` und `/etc/fstab`), oder das
-Home-Verzeichnis auf einer verschlüsselten Root-Partition.
+Empfohlen, aber keine Voraussetzung, ist deshalb ein mit LUKS
+verschlüsselter Datenträger, z.B. eine eigene Partition wie `/DATA`, die
+beim Booten über eine Schlüsseldatei auf der ebenfalls verschlüsselten
+Root-Partition entsperrt wird (Einträge in `/etc/crypttab` und
+`/etc/fstab`), oder das Home-Verzeichnis auf einer verschlüsselten
+Root-Partition.
 
-Mit `REQUIRE_ENCRYPTION=1` (Standard) bricht `setup.sh` ab, wenn die Daten
-auf einem unverschlüsselten Datenträger liegen.
+Liegen die Daten unverschlüsselt, gibt `setup.sh` nur einen Hinweis aus.
+Mit `REQUIRE_ENCRYPTION=1` in `setup.conf` bricht `setup.sh` stattdessen ab,
+z.B. wenn eigene Vorgaben eine verschlüsselte Ablage verlangen.
 
 ### Software
 
@@ -141,9 +144,8 @@ Keine dieser Dateien gehört ins Repository, `.gitignore` schließt sie aus.
 
 ## 5. Einrichtung
 
-Voraussetzung: Das Zielverzeichnis liegt auf einem mit LUKS verschlüsselten,
-eingehängten Datenträger. Der Pfad ist frei wählbar, im Beispiel
-`/DATA/offline-coder-cpu`.
+Der Pfad ist frei wählbar, im Beispiel `/DATA/offline-coder-cpu`. Empfohlen
+ist ein verschlüsselter Datenträger (siehe Abschnitt 3, Verschlüsselung).
 
 ```
 ZIEL=/DATA/offline-coder-cpu      # eigenen Pfad einsetzen
@@ -206,7 +208,7 @@ Die wichtigsten Werte:
 | `AUTOCOMPLETE`           | 1 = Container für die VS-Code-Vervollständigung   |
 | `MIN_RAM_GB`             | Mindest-RAM für die Prüfung (Standard: 16)        |
 | `RESERVED_RAM_GB`        | RAM für System, Desktop, Browser, VS Code (6)     |
-| `REQUIRE_ENCRYPTION`     | 1 = Abbruch bei unverschlüsselter Ablage          |
+| `REQUIRE_ENCRYPTION`     | unverschlüsselt: 0 = Hinweis (Std.), 1 = Abbruch  |
 
 > **Hinweis zu Open WebUI:** Werte wie Titel-Generierung,
 > Hintergrund-Aufgaben oder Standardmodell übernimmt Open WebUI nur beim
@@ -298,8 +300,8 @@ im Container läuft. Benötigt zusätzlich ca. 2 GB RAM.
 - Chats und hochgeladene Dateien liegen in `WEBUI_DATA_DIR`. Sensible Inhalte
   (z.B. Logs mit personenbezogenen Daten) nach der Analyse löschen.
 - `WEBUI_DATA_DIR` und der Sitzungsschlüssel `.webui_secret` liegen im
-  Projektverzeichnis auf dem verschlüsselten Datenträger. Bei
-  ausgeschaltetem Rechner sind sie ohne Passphrase nicht lesbar, im
+  Projektverzeichnis. Liegt es auf einem verschlüsselten Datenträger, sind
+  sie bei ausgeschaltetem Rechner ohne Passphrase nicht lesbar. Im
   laufenden Betrieb sind sie wie alle anderen Dateien zugänglich.
 - Ob vertrauliche Daten auf dem Rechner verarbeitet werden dürfen, regeln die
   internen Vorgaben, auch wenn das Modell lokal läuft.
@@ -375,7 +377,8 @@ Dateien anhängen oder `CHAT_CTX` erhöhen (benötigt mehr RAM).
 **"liegt auf einem unverschlüsselten Datenträger"**
 
 Der Datenträger mit dem Projektverzeichnis ist nicht mit LUKS
-verschlüsselt. Prüfung im Projektverzeichnis:
+verschlüsselt. Standardmäßig ist das nur ein Hinweis, ein Fehler nur mit
+`REQUIRE_ENCRYPTION=1`. Prüfung im Projektverzeichnis:
 
 ```
 findmnt --target .

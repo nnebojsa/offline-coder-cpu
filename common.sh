@@ -83,7 +83,7 @@ set_defaults() {
     MIN_RAM_GB=16
     RESERVED_RAM_GB=6
     MIN_IMAGE_SPACE_GB=8
-    REQUIRE_ENCRYPTION=1
+    REQUIRE_ENCRYPTION=0
 }
 
 # Relativen Pfad auf das Projektverzeichnis beziehen und normalisieren
