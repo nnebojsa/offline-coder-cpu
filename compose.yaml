@@ -17,6 +17,12 @@
 #
 # Der Projektname (offline-coder-cpu) wird von den Skripten per -p gesetzt. Ein
 # top-level "name:" fehlt bewusst, da ältere Compose-Versionen ihn ablehnen.
+#
+# Container-Netz: setup.sh bzw. ctl.sh legen offline-coder-cpu_default selbst
+# an, mit NETWORK_INTERNAL=1 als internes Netz ohne Route nach außen. Die
+# Container erreichen sich nur gegenseitig, die Ports auf dem Host
+# funktionieren bei rootless Podman trotzdem. Compose verwendet das Netz nur
+# (external) und legt es nicht selbst an.
 
 x-llm-base: &llm-base
   image: ${LLM_IMAGE}
@@ -125,3 +131,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5m
+
+networks:
+  default:
+    name: offline-coder-cpu_default
+    external: true

@@ -32,6 +32,10 @@ VS Code --> 127.0.0.1:8012 --> [ fim ]          (only with AUTOCOMPLETE=1)
 The chat container has no port on the host and no web interface of its
 own. It is reachable only by Open WebUI.
 
+All containers are attached to an internal Podman network without a route
+to the outside (`NETWORK_INTERNAL=1`). They can only reach each other, the
+browser and VS Code reach them through the ports on `127.0.0.1`.
+
 ## 2. What it does
 
 - Chat with a local language model, also without a network connection.
@@ -42,9 +46,11 @@ own. It is reachable only by Open WebUI.
 - **Files and knowledge bases:** texts and source code are split into chunks
   and searched locally. The required embedding model is taken over from the
   Open WebUI image during setup.
-- **No data leaves the machine:** models are downloaded once on the host.
-  Afterwards llama-server (`--offline`) and Open WebUI (`OFFLINE_MODE`) work
-  without internet access. Telemetry and update checks are disabled.
+- **No data leaves the machine:** models and images are downloaded once on
+  the host. Afterwards the containers have no connection to the outside,
+  the container network is internal. In addition, downloads, telemetry and
+  update checks are disabled in llama-server (`--offline`) and Open WebUI
+  (`OFFLINE_MODE`).
 - By default, all ports are bound to `127.0.0.1` only.
 - **Encryption notice:** `setup.sh` checks whether the Open WebUI data is
   located on a LUKS/dm-crypt encrypted device and prints a notice
@@ -198,6 +204,7 @@ The most important values:
 | `MIN_RAM_GB`             | minimum RAM for the check (default: 16)            |
 | `RESERVED_RAM_GB`        | RAM for system, desktop, browser, VS Code (6)      |
 | `REQUIRE_ENCRYPTION`     | 0 = notice (default), 1 = abort if unencrypted     |
+| `NETWORK_INTERNAL`       | 1 = containers without outside access (default)    |
 
 > **Note on Open WebUI:** values such as title generation, background tasks
 > or the default model are applied by Open WebUI only on the first start.
@@ -284,8 +291,22 @@ container. Requires approx. 2 GB of additional RAM.
 ## 11. Offline operation and data protection
 
 - After setup, no internet connection is required.
-- `OFFLINE_MODE` and `--offline` prevent downloads but do not block
-  connections. A strict separation requires firewall rules.
+- The containers are attached to an internal Podman network without a route
+  to the outside (`NETWORK_INTERNAL=1`, default). Even if a piece of software
+  tried, it cannot reach any destination on the network from inside the
+  container. Forwarding the ports to the host only works with rootless
+  Podman, `setup.sh` does not allow running as root.
+- Check while running, both commands must fail:
+
+  ```
+  podman exec offline-coder-cpu-webui curl -sS --max-time 5 https://example.com
+  podman exec offline-coder-cpu-chat  curl -sS --max-time 5 https://example.com
+  ```
+
+  `./ctl.sh status` shows in the line "Netz" whether the network is
+  internal.
+- This only applies to the containers. The machine itself (browser,
+  operating system updates) is not affected.
 - Chats and uploaded files are stored in `WEBUI_DATA_DIR`. Sensitive content
   (e.g. logs containing personal data) should be deleted after analysis.
 - `WEBUI_DATA_DIR` and the session key `.webui_secret` are located in the

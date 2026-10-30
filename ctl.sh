@@ -38,7 +38,7 @@ require_setup() {
 # Werte der letzten Einrichtung aus .env statt aus setup.conf
 load_env_state() {
     local key val
-    for key in AUTOCOMPLETE WEBUI_PORT FIM_PORT BIND_ADDRESS LLM_IMAGE WEBUI_IMAGE; do
+    for key in AUTOCOMPLETE WEBUI_PORT FIM_PORT BIND_ADDRESS LLM_IMAGE WEBUI_IMAGE NETWORK_INTERNAL; do
         val="$(env_value "$key")"
         if [ -n "$val" ]; then
             printf -v "$key" '%s' "$val"
@@ -85,6 +85,10 @@ cmd_start() {
         fi
         if ! image_exists "$LLM_IMAGE" || ! image_exists "$WEBUI_IMAGE"; then
             die "Images fehlen, zuerst ./setup.sh ausführen"
+        fi
+        # Netz anlegen, falls es fehlt (compose verwendet es nur)
+        if ! ensure_network create-only; then
+            exit 1
         fi
         info "lege fehlende Container an: ${missing[*]}"
         if ! compose_logged up -d "${missing[@]}"; then
@@ -156,6 +160,11 @@ cmd_status() {
     fi
 
     echo
+    case "$(network_internal_state)" in
+        true)  echo "Netz:         intern, keine Verbindung nach außen ($NETWORK_NAME)" ;;
+        false) echo "Netz:         Verbindungen nach außen möglich ($NETWORK_NAME)" ;;
+        *)     echo "Netz:         nicht vorhanden ($NETWORK_NAME)" ;;
+    esac
     echo "Oberfläche:   $(webui_url)"
     if [ "$AUTOCOMPLETE" = "1" ]; then
         echo "Autocomplete: $(fim_url)"

@@ -84,6 +84,7 @@ set_defaults() {
     RESERVED_RAM_GB=6
     MIN_IMAGE_SPACE_GB=8
     REQUIRE_ENCRYPTION=0
+    NETWORK_INTERNAL=1
 }
 
 # Relativen Pfad auf das Projektverzeichnis beziehen und normalisieren
@@ -290,6 +291,43 @@ container_status() {
 container_running() { [ "$(container_status "$1")" = "running" ]; }
 
 image_exists() { podman image exists "$1" </dev/null >/dev/null 2>&1; }
+
+# ---------------------------------------------------------------------------
+# Container-Netz
+# ---------------------------------------------------------------------------
+
+# Ausgabe "true" oder "false", leer falls das Netz fehlt
+network_internal_state() {
+    podman network inspect --format '{{.Internal}}' "$NETWORK_NAME" </dev/null 2>/dev/null || true
+}
+
+# Legt das Container-Netz an. Mit NETWORK_INTERNAL=1 als internes Netz:
+# keine Route nach außen, die Container erreichen sich nur gegenseitig.
+# Ports auf dem Host funktionieren bei rootless Podman trotzdem.
+# $1 = "create-only": ein vorhandenes Netz unverändert lassen (ctl.sh)
+# Sonst wird ein vorhandenes Netz mit abweichender Einstellung neu angelegt,
+# dafür dürfen keine Container mehr angeschlossen sein (setup.sh).
+ensure_network() {
+    local want=false state args=()
+    if [ "$NETWORK_INTERNAL" = "1" ]; then
+        want=true
+        args+=(--internal)
+    fi
+    if podman network exists "$NETWORK_NAME" </dev/null 2>/dev/null; then
+        state="$(network_internal_state)"
+        if [ "${1:-}" = "create-only" ] || [ "$state" = "$want" ]; then
+            return 0
+        fi
+        if ! podman network rm "$NETWORK_NAME" </dev/null >/dev/null 2>&1; then
+            err "Netz $NETWORK_NAME konnte nicht neu angelegt werden (noch Container angeschlossen?)"
+            ehint "Abhilfe: ./ctl.sh stop, danach ./setup.sh"
+            return 1
+        fi
+    fi
+    if ! run_logged podman network create ${args[@]+"${args[@]}"} "$NETWORK_NAME"; then
+        return 1
+    fi
+}
 
 # ---------------------------------------------------------------------------
 # Bereitschaft der Dienste

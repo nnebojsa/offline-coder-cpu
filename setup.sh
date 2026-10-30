@@ -145,9 +145,15 @@ check_config() {
 
     local f
     for f in WEBUI_AUTH WEBUI_OFFLINE WEBUI_TITLE_GENERATION WEBUI_BACKGROUND_TASKS \
-             WEBUI_CONFIG_FROM_ENV CHAT_THINKING AUTOCOMPLETE REQUIRE_ENCRYPTION; do
+             WEBUI_CONFIG_FROM_ENV CHAT_THINKING AUTOCOMPLETE REQUIRE_ENCRYPTION \
+             NETWORK_INTERNAL; do
         check_flag "$f"
     done
+
+    if [ "$NETWORK_INTERNAL" = "1" ] && [ "$WEBUI_OFFLINE" = "0" ]; then
+        check_warn "WEBUI_OFFLINE=0 hat mit NETWORK_INTERNAL=1 keine Wirkung" \
+                   "Im internen Netz kann Open WebUI nichts herunterladen"
+    fi
 
     check_port WEBUI_PORT
     if [ "$AUTOCOMPLETE" = "1" ]; then
@@ -751,6 +757,7 @@ WEBUI_TITLE_GENERATION=$(to_bool "$WEBUI_TITLE_GENERATION")
 WEBUI_BACKGROUND_TASKS=$(to_bool "$WEBUI_BACKGROUND_TASKS")
 WEBUI_REQUEST_TIMEOUT=$WEBUI_REQUEST_TIMEOUT
 WEBUI_PERSISTENT_CONFIG=$persistent
+NETWORK_INTERNAL=$NETWORK_INTERNAL
 EOF
     )
     mv -f "$tmp" "$ENV_FILE"
@@ -844,7 +851,8 @@ seed_webui_cache() {
         warn "Embedding-Modell konnte nicht aus dem Image übernommen werden"
         if [ "$WEBUI_OFFLINE" = "1" ]; then
             hint "Mit WEBUI_OFFLINE=1 schlägt dann das Hochladen von Dateien fehl."
-            hint "Abhilfe: einmalig mit WEBUI_OFFLINE=0 starten, Open WebUI lädt es selbst."
+            hint "Abhilfe: einmalig mit WEBUI_OFFLINE=0 und NETWORK_INTERNAL=0 starten,"
+            hint "Open WebUI lädt es dann selbst."
         fi
     fi
     podman rm -f "$SEED_CONTAINER" >/dev/null 2>&1 || true
@@ -864,6 +872,16 @@ start_stack() {
     done
     if podman pod exists "$POD_NAME" 2>/dev/null; then
         podman pod rm -f "$POD_NAME" >/dev/null 2>&1 || true
+    fi
+
+    # Netz vor den Containern anlegen, compose verwendet es nur (external)
+    if ! ensure_network; then
+        exit 1
+    fi
+    if [ "$(network_internal_state)" = "true" ]; then
+        ok "Container-Netz $NETWORK_NAME: intern, keine Verbindung nach außen"
+    else
+        warn "Container-Netz $NETWORK_NAME: Verbindungen nach außen möglich (NETWORK_INTERNAL=0)"
     fi
 
     if ! compose_logged up -d "${services[@]}"; then
